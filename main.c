@@ -1,7 +1,9 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
+//Avalia um ponto x com base no polinomio de lagrange
 double EvaluateInterpolation(int size, double x, double* xs, double* ws, double* wys, double* ys){
   for(int i = 0; i < size; i++){
     if(xs[i] == x){
@@ -16,7 +18,8 @@ double EvaluateInterpolation(int size, double x, double* xs, double* ws, double*
   return num/den;
 }
 
-int LagrangeWeights(int size, double* ws, double* wys, double* xs, double* os , double* ys) {
+//Constroi o polinomio de lagrange
+int LagrangeWeights(int size, double* ws, double* wys, double* xs, double* ys) {
   for(int i = 0; i < size; i++){
     double t = 1;
     for(int j = 0; j < i; j++){
@@ -26,9 +29,99 @@ int LagrangeWeights(int size, double* ws, double* wys, double* xs, double* os , 
       t *= xs[i] - xs[j];
     }
     ws[i] = 1/t;
-    wys[i] = (ys[i]*cos(os[i]))/t;
+    wys[i] = ys[i]/t;
   }
   return 0;
+}
+
+double TrapIntegral(double x1, double x2, int size, double* xs, double* ws, double* wys, double* ys, double* wos, double* wyos, double* os){
+  double fx1 = EvaluateInterpolation(size,x1,xs,ws,wys,ys)*EvaluateInterpolation(size,x1,xs,wos,wyos,os);
+  double fx2 = EvaluateInterpolation(size,x2,xs,ws,wys,ys)*EvaluateInterpolation(size,x2,xs,wos,wyos,os);
+  return ((x2-x1)/2.0)*(fx1+fx2);
+}
+
+double CompTrapIntegral(double x1, double x2, int r, int size, double* xs, double* ws, double* wys, double* ys, double* wos, double* wyos, double* os){
+  double area = 0;
+  double start = 0;
+  double interval = 0.0;
+  if(x1>x2){
+    start = x2;
+    interval = (x1-x2)/r;
+  }
+  else{
+    start = x1;
+    interval = (x2-x1)/r;
+  }
+  double next = start + interval;
+  for(int i = 0; i < r; i++){
+    area = area + TrapIntegral(start,next, size, xs, ws, wys, ys, wos, wyos, os);
+    start = next;
+    next = next + interval;
+  }
+  return area;
+}
+
+double SimpIntegral(double x1, double x2, int size, double* xs, double* ws, double* wys, double* ys, double* wos, double* wyos, double* os){
+  double fx1 = EvaluateInterpolation(size,x1,xs,ws,wys,ys)*EvaluateInterpolation(size,x1,xs,wos,wyos,os);
+  double fxm = EvaluateInterpolation(size,(x2+x1)/2.0,xs,ws,wys,ys)*EvaluateInterpolation(size,(x2+x1)/2,xs,wos,wyos,os);
+  double fx2 = EvaluateInterpolation(size,x2,xs,ws,wys,ys)*EvaluateInterpolation(size,x2,xs,wos,wyos,os);
+  return ((x2-x1)/6.0)*(fx1+4*fxm+fx2);
+}
+
+double CompSimpIntegral(double x1, double x2, int r, int size, double* xs, double* ws, double* wys, double* ys, double* wos, double* wyos, double* os){
+  double area = 0;
+  double start = 0;
+  double interval = 0.0;
+  if(x1>x2){
+    start = x2;
+    interval = (x1-x2)/r;
+  }
+  else{
+    start = x1;
+    interval = (x2-x1)/r;
+  }
+  double next = start + interval;
+  for(int i = 0; i < r; i++){
+    area = area + SimpIntegral(start,next, size, xs, ws, wys, ys, wos, wyos, os);
+    start = next;
+    next = next + interval;
+  }
+  return area;
+}
+
+double rng(){
+  return ((double) rand())/((double) RAND_MAX);
+}
+
+double MonteCarloFunction(double x, double y){
+  if(x*x + y*y <= 1){
+    return 1;
+  }
+  else{
+    return 0;
+  }
+}
+
+double MonteCarlo(double a, double b,int n){
+  double area = 0.0;
+  double u = 0.0;
+  for(int i = 0; i < n; i++){
+    u = rng();
+    area = area + MonteCarloFunction((b-a)*u+a,0.0);
+  }
+  return ((b-a)*area)/n;
+}
+
+double TwoDimMonteCarlo(double a, double b, double c, double d, int n){
+  double area = 0.0;
+  double u = 0.0;
+  double v = 0.0;
+  for(int i = 0; i < n; i++){
+    u = rng();
+    v = rng();
+    area = area + MonteCarloFunction((d-c)*u+c,(b-a)*v+a);
+  }
+  return (area/n)*((d-c)*(b-a));
 }
 
 int main(int argc, char *argv[]) {
@@ -40,15 +133,17 @@ int main(int argc, char *argv[]) {
         printf("Erro ao carregar o arquivo\n");
         return 1;
     }
-    char words[50];
-    fgets(words,50,ptr);
-    int points = 0;
+    
+    char words[50]; //Array de caracteres que armazenara as linhas do arquivo
+    fgets(words,50,ptr);//Captura primeira linha com o valor da quantidade de linhas
+    int points = 0; //Armazena a quantidade de linhas
     sscanf(words,"%d",&points);
     
-    double ws[points], wys[points], ys[points], xs[points], os[points];
-    int column = 0;
+    double ws[points], wys[points], wos[points], wyos[points], ys[points], xs[points], os[points]; //Arrays com os dados
 
-    
+
+    //Processa o arquivo, armazenando os dados nos arrays
+    int column = 0;
     while (!feof(ptr) && column < points) {
       fgets(words,50,ptr);
       char new_word[50];
@@ -62,15 +157,15 @@ int main(int argc, char *argv[]) {
       xs[column] = atof(new_word);
       j = i+1;
       i = 0;
-      while(words[i] != ' '){
+      while(words[j+i] != ' '){
 	new_word[i] = words[j+i];
 	i++;
       }
       new_word[j+i] = '\0';
-      os[column] = atof(new_word);
-      j = j + i + 1;
+      os[column] = cos(atof(new_word));
+      j = j + i +1;
       i = 0;
-      while(words[i] != '\n'){
+      while(words[j+i] != '\n'){
 	new_word[i] = words[j+i];
 	i++;
       }
@@ -79,13 +174,22 @@ int main(int argc, char *argv[]) {
       
       column++;
     }
-   
-    LagrangeWeights(column,ws,wys,xs,os,ys);
 
-    for(int i = 0; i < column; i++){
-      printf("%f %f\n", ws[i], wys[i]);
-    }
+    //Gera os pesos de Lagrange
+    LagrangeWeights(points,ws,wys,xs,ys);
+    LagrangeWeights(points,wos,wyos,xs,os);
     
+    //printf("%f\n",CompTrapIntegral(0, 5, 10000, points, xs, ws, wys, ys, wos, wyos, os));
+    //printf("%f\n",CompSimpIntegral(0, 5, 100, points, xs, ws, wys, ys, wos, wyos, os));
+
+    srand(time(NULL));
+    
+    /*for(int i = 0; i < points; i++){
+      printf("%f %f %f %f %f\n",xs[i],os[i],ys[i],ws[i], wys[i]);
+      }*/
+    printf("%f\n",4*TwoDimMonteCarlo(0.0,1.0,0.0,1.0,1000000000));
+    
+    //printf("%f\n",EvaluateInterpolation(points, 16, xs,ws,wys,ys));
     return 0;
 }
 
