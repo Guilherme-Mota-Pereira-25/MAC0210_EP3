@@ -35,14 +35,14 @@ int LagrangeWeights(int size, double* ws, double* wys, double* xs, double* ys) {
 }
 
 //Calcula a integral com base no metodo do trapezio
-double TrapIntegral(double x1, double x2, int size, double* xs, double* ws, double* wys, double* ys, double* wos, double* wyos, double* os){
-  double fx1 = EvaluateInterpolation(size,x1,xs,ws,wys,ys)*EvaluateInterpolation(size,x1,xs,wos,wyos,os);
-  double fx2 = EvaluateInterpolation(size,x2,xs,ws,wys,ys)*EvaluateInterpolation(size,x2,xs,wos,wyos,os);
+double TrapIntegral(double x1, double x2, int size, double* xs, double* ws, double* wys, double* ys){
+  double fx1 = EvaluateInterpolation(size,x1,xs,ws,wys,ys);
+  double fx2 = EvaluateInterpolation(size,x2,xs,ws,wys,ys);
   return ((x2-x1)/2.0)*(fx1+fx2);
 }
 
 //Calcula a integral por meio do metodo de integracao composta com o metodo do trapezio
-double CompTrapIntegral(double x1, double x2, int r, int size, double* xs, double* ws, double* wys, double* ys, double* wos, double* wyos, double* os){
+double CompTrapIntegral(double x1, double x2, int r, int size, double* xs, double* ws, double* wys, double* ys){
   double area = 0;
   double start = 0;
   double interval = 0.0;
@@ -57,7 +57,7 @@ double CompTrapIntegral(double x1, double x2, int r, int size, double* xs, doubl
   }
   double next = start + interval;
   for(int i = 0; i < r; i++){
-    area = area + TrapIntegral(start,next, size, xs, ws, wys, ys, wos, wyos, os);
+    area = area + TrapIntegral(start,next, size, xs, ws, wys, ys);
     start = next;
     next = next + interval;
   }
@@ -65,15 +65,15 @@ double CompTrapIntegral(double x1, double x2, int r, int size, double* xs, doubl
 }
 
 //Calcula a integral com base no metodo de Simpson
-double SimpIntegral(double x1, double x2, int size, double* xs, double* ws, double* wys, double* ys, double* wos, double* wyos, double* os){
-  double fx1 = EvaluateInterpolation(size,x1,xs,ws,wys,ys)*EvaluateInterpolation(size,x1,xs,wos,wyos,os);
-  double fxm = EvaluateInterpolation(size,(x2+x1)/2.0,xs,ws,wys,ys)*EvaluateInterpolation(size,(x2+x1)/2,xs,wos,wyos,os);
-  double fx2 = EvaluateInterpolation(size,x2,xs,ws,wys,ys)*EvaluateInterpolation(size,x2,xs,wos,wyos,os);
+double SimpIntegral(double x1, double x2, int size, double* xs, double* ws, double* wys, double* ys){
+  double fx1 = EvaluateInterpolation(size,x1,xs,ws,wys,ys);
+  double fxm = EvaluateInterpolation(size,(x2+x1)/2.0,xs,ws,wys,ys);
+  double fx2 = EvaluateInterpolation(size,x2,xs,ws,wys,ys);
   return ((x2-x1)/6.0)*(fx1+4*fxm+fx2);
 }
 
 //Calcula a integral por meio do metodo de integracao composta com o metodo de Simpson
-double CompSimpIntegral(double x1, double x2, int r, int size, double* xs, double* ws, double* wys, double* ys, double* wos, double* wyos, double* os){
+double CompSimpIntegral(double x1, double x2, int r, int size, double* xs, double* ws, double* wys, double* ys){
   double area = 0;
   double start = 0;
   double interval = 0.0;
@@ -88,7 +88,7 @@ double CompSimpIntegral(double x1, double x2, int r, int size, double* xs, doubl
   }
   double next = start + interval;
   for(int i = 0; i < r; i++){
-    area = area + SimpIntegral(start,next, size, xs, ws, wys, ys, wos, wyos, os);
+    area = area + SimpIntegral(start,next, size, xs, ws, wys, ys);
     start = next;
     next = next + interval;
   }
@@ -152,11 +152,8 @@ int main(int argc, char *argv[]) {
     sscanf(words,"%d",&points);
 
     double xs[points]; //Array de valores de x
-    double ys[points]; //Array de valores de y
+    double ys[points]; //Array de valores de y multiplicados pelo angulo
     double ws[points], wys[points]; //Arrays de pesos da interpolacao de y
-    double os[points]; //Array de valores de angulo
-    double wos[points], wyos[points]; //Arrays de pesos da interpolacao do angulo
-
 
     //Processa o arquivo, armazenando os dados nos arrays
     int column = 0;
@@ -178,7 +175,7 @@ int main(int argc, char *argv[]) {
 	i++;
       }
       new_word[j+i] = '\0';
-      os[column] = cos(atof(new_word));
+      ys[column] = cos(atof(new_word));
       j = j + i + 1;
       i = 0;
       while(words[j+i] != '\n'){
@@ -186,28 +183,24 @@ int main(int argc, char *argv[]) {
 	i++;
       }
       new_word[j+i] = '\0';
-      ys[column] = atof(new_word);
+      ys[column] *= atof(new_word);
       
       column++;
     }
 
     //Gera os pesos de Lagrange
     LagrangeWeights(points,ws,wys,xs,ys); //Gera os pesos de y
-    LagrangeWeights(points,wos,wyos,xs,os); //Gera os pesos dos angulos
-
-
-
 
     //Parte de testes
 
     
-    //printf("%f\n",CompTrapIntegral(0, 5, 10000, points, xs, ws, wys, ys, wos, wyos, os));
-    //printf("%f\n",CompSimpIntegral(0, 5, 100, points, xs, ws, wys, ys, wos, wyos, os));
+    printf("%f\n",CompTrapIntegral(0, 5, 1, points, xs, ws, wys, ys));
+    printf("%f\n",CompSimpIntegral(0, 5, 1, points, xs, ws, wys, ys));
     
     /*for(int i = 0; i < points; i++){
       printf("%f %f %f %f %f\n",xs[i],os[i],ys[i],ws[i], wys[i]);
       }*/
-    printf("%f\n",4*TwoDimMonteCarlo(0.0,1.0,0.0,1.0,1000000000));
+    //printf("%f\n",4*TwoDimMonteCarlo(0.0,1.0,0.0,1.0,1000000000));
     
     //printf("%f\n",EvaluateInterpolation(points, 16, xs,ws,wys,ys));
     return 0;
