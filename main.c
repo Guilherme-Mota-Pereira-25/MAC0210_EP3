@@ -101,12 +101,12 @@ double rng(){
 }
 
 //Funcao estipulada para ser avaliada pelo metodo de Monte Carlo
-double MonteCarloFunction(double x, double y){
-  if(x*x + y*y <= 1){
-    return 1;
+double MonteCarloFunction(double* x){
+  if(x[0]*x[0] + x[1]*x[1] > 1.0){
+    return 0;
   }
   else{
-    return 0;
+    return 1;
   }
 }
 
@@ -114,24 +114,30 @@ double MonteCarloFunction(double x, double y){
 double MonteCarlo(double a, double b,int n){
   double area = 0.0;
   double u = 0.0;
+  double x[1];
   for(int i = 0; i < n; i++){
     u = rng(); //Gera um valor aleatorio
-    area = area + MonteCarloFunction((b-a)*u+a,0.0); //Avalia a funcao em (b-a)*u+a
+    x[0] = (b-a)*u+a;
+    area = area + MonteCarloFunction(x); //Avalia a funcao em (b-a)*u+a
   }
   return ((b-a)*area)/n; //Area/n multiplicada pelo fator de correcao de du/dx 
 }
 
 //Avalia o metodo de Monte Carlo para uma dimensao
-double TwoDimMonteCarlo(double a, double b, double c, double d, int n){
+double MulDimMonteCarlo(double* a, double* b, int dim, int n){
   double area = 0.0;
-  double u = 0.0;
-  double v = 0.0;
+  double ran[dim];
+  double var = 1.0;
   for(int i = 0; i < n; i++){
-    u = rng(); //Gera um valor aleatorio
-    v = rng(); //Gera um valor aleatorio
-    area = area + MonteCarloFunction((d-c)*u+c,(b-a)*v+a); //Avalia a funcao em (d-c)*u+c,(b-a)*v+a
+    for(int j = 0; j < dim; j++){
+      ran[j] = (b[j] - a[j])*rng() + a[j];
+    }
+    area = area + MonteCarloFunction(ran); //Avalia a funcao em (d-c)*u+c,(b-a)*v+a
   }
-  return (area/n)*((d-c)*(b-a));//Area/n multiplicada pelo fator de correcao de dudv/dxdy 
+  for(int i = 0; i < dim; i++){
+    var *= b[i] - a[i];
+  }
+  return (area/n)*var;//Area/n multiplicada pelo fator de correcao de dudv/dxdy 
 }
 
 int main(int argc, char *argv[]) {
@@ -193,14 +199,39 @@ int main(int argc, char *argv[]) {
 
     //Parte de testes
 
-    
-    printf("%f\n",CompTrapIntegral(0, 5, 1, points, xs, ws, wys, ys));
-    printf("%f\n",CompSimpIntegral(0, 5, 1, points, xs, ws, wys, ys));
+    /*for(int i = 1; i <= 10; i++){
+      printf("%d & %.20f \\\\ \n",i,CompSimpIntegral(0, 30, i, points, xs, ws, wys, ys));
+    }
+    for(int i = 20; i <= 100; i = i+10){
+      printf("%d & %.20f \\\\ \n",i,CompSimpIntegral(0, 30, i, points, xs, ws, wys, ys));
+    }
+    for(int i = 1000; i <= 1000000000; i = i*10){
+      printf("%d & %.20f \\\\ \n",i,CompSimpIntegral(0, 30, i, points, xs, ws, wys, ys));
+      }*/
     
     /*for(int i = 0; i < points; i++){
       printf("%f %f %f %f %f\n",xs[i],os[i],ys[i],ws[i], wys[i]);
       }*/
-    //printf("%f\n",4*TwoDimMonteCarlo(0.0,1.0,0.0,1.0,1000000000));
+
+
+    /*for(long int i = 10; i <= 100000000000; i = i*10){
+      printf("%ld & %.20f \\\\ \n",i,MonteCarlo(0.0,1.0,i));
+      }*/
+
+    /*for(long int i = 10; i <= 100000000000; i = i*10){
+      printf("%ld & %.20f \\\\ \n",i,MonteCarlo(3.0,7.0,i));
+    }*/
+
+    /*for(long int i = 10; i <= 100000000000; i = i*10){
+      printf("%ld & %.20f \\\\ \n",i,MonteCarlo(0.0,1000.0,i));
+      }*/
+
+    double a[2], b[2];
+    a[0] = 0.0;
+    a[1] = 0.0;
+    b[0] = 1.0;
+    b[1] = 1.0;
+    printf("%f\n",4*MulDimMonteCarlo(a,b,2,1000000));
     
     //printf("%f\n",EvaluateInterpolation(points, 16, xs,ws,wys,ys));
     return 0;
